@@ -291,11 +291,6 @@ static NSString *const CHANNEL_NAME = @"flutter_webview_plugin";
     }
 }
 
-- (void)cleanCookies {
-    [[NSURLSession sharedSession] resetWithCompletionHandler:^{
-        }];
-}
-
 - (bool)checkInvalidUrl:(NSURL*)url {
   NSString* urlString = url != nil ? [url absoluteString] : nil;
   if (_invalidUrlRegex != [NSNull null] && urlString != nil) {
@@ -330,8 +325,16 @@ static NSString *const CHANNEL_NAME = @"flutter_webview_plugin";
         id data = @{@"url": navigationAction.request.URL.absoluteString};
         [channel invokeMethod:@"onUrlChanged" arguments:data];
     }
-
-    if (_enableAppScheme ||
+    
+    NSURL *requestURL = [[navigationAction request] URL];
+    if (requestURL != nil && [navigationAction targetFrame] == nil) {
+        if (@available(iOS 10.0, *)) {
+            [[UIApplication sharedApplication] openURL:requestURL options:@{} completionHandler:nil];
+        } else {
+            [[UIApplication sharedApplication] openURL:requestURL];
+        }
+        decisionHandler(WKNavigationActionPolicyCancel);
+    } else if (_enableAppScheme ||
         ([webView.URL.scheme isEqualToString:@"http"] ||
          [webView.URL.scheme isEqualToString:@"https"] ||
          [webView.URL.scheme isEqualToString:@"about"] ||
